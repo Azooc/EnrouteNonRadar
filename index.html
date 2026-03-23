@@ -161,7 +161,7 @@
 
     .major-point .symbol-wrap {
       position: absolute;
-      top: 0;
+      top: 50%;
       left: 50%;
       transform: translate(-50%, -50%);
       width: 44px;
@@ -199,7 +199,7 @@
 
     .navaid-point .symbol-wrap {
       position: absolute;
-      top: 0;
+      top: 50%;
       left: 50%;
       transform: translate(-50%, -50%);
       width: 38px;
@@ -476,7 +476,7 @@ ROUTENAME: V417`
       let points = [];
       let width = point3 ? 1320 : 900;
       const height = point3 ? 240 : 220;
-      const lineY = point3 ? 140 : 130;
+      const lineY = point3 ? 140 : 130; // THIS is the exact center line EVERYTHING must align to
 
       if (!point3) {
         const ordered = [point1, ...navaids, point2].filter(Boolean);
@@ -575,8 +575,8 @@ ROUTENAME: V417`
         const from = pointById(airway, seg.from);
         const to = pointById(airway, seg.to);
 
-        const start = getSegmentAnchor(from, 'start');
-        const end = getSegmentAnchor(to, 'end');
+        const start = { ...getSegmentAnchor(from, 'start'), y: airway.lineY };
+        const end = { ...getSegmentAnchor(to, 'end'), y: airway.lineY };
 
         const midX = (start.x + end.x) / 2;
         const topRowY = airway.lineY - 24 - (index % 2) * 2;
@@ -609,7 +609,7 @@ ROUTENAME: V417`
       return airway.points.map(point => {
         if (point.major) {
           return `
-            <div class="point major-point" style="left:${point.x}px; top:${point.y}px;">
+            <div class="point major-point" style="left:${point.x}px; top:${airway.lineY}px;">
               ${inputHTML(point.label, 'point-label major')}
               <div class="symbol-wrap">${symbolHTML(point)}</div>
               ${point.arriveRadial ? inputHTML(point.arriveRadial, 'radial-input radial-left') : ''}
@@ -619,7 +619,7 @@ ROUTENAME: V417`
         }
 
         return `
-          <div class="point navaid-point" style="left:${point.x}px; top:${point.y}px;">
+          <div class="point navaid-point" style="left:${point.x}px; top:${airway.lineY}px;">
             ${inputHTML(point.label, 'point-label')}
             <div class="symbol-wrap">${symbolHTML(point)}</div>
           </div>
