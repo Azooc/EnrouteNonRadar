@@ -152,13 +152,17 @@
         <code>POINT1: MLU:VORTAC:087</code><br>
         <code>POINT2: MEI:VORTAC:272</code><br>
         <code>POINT3: none</code><br>
-        <code>NAVAID1: STUEE:false</code><br>
+        <code>NAVAID1: STUEE:false:1</code><br>
         <code>SEG1: 15</code><br>
         <code>SEG2: 83</code><br>
         <code>TOTALDISTANCE1: 98</code><br>
         <code>ROUTENAME: V417</code><br><br>
         Middle major point example:<br>
-        <code>POINT2: MEI:VORTAC:272:098</code>
+        <code>POINT2: MEI:VORTAC:272:098</code><br><br>
+        Navaid section example:<br>
+        <code>NAVAID1: STUEE:true:1</code><br>
+        <code>NAVAID2: HEDUD:false:2</code><br>
+        1 = between POINT1 and POINT2, 2 = between POINT2 and POINT3
       </div>
     </div>
   </div>
@@ -169,7 +173,7 @@
 POINT2: MHZ:VORTAC:281
 POINT3: none
 NAVAIDS: true
-NAVAID1: HATER
+NAVAID1: HATER:true:1
 NAVAID2: none
 NAVAID3: none
 NAVAID4: none
@@ -185,9 +189,9 @@ ROUTENAME: V427`,
 POINT2: MHZ:VORTAC:266:091
 POINT3: MEI:VORTAC:272
 NAVAIDS: true
-NAVAID1: STUEE:true
-NAVAID2: DINKY
-NAVAID3: HEDUD
+NAVAID1: STUEE:true:1
+NAVAID2: DINKY:false:1
+NAVAID3: HEDUD:false:1
 NAVAID4: none
 SEG1: 19
 SEG2: 12
@@ -201,7 +205,7 @@ ROUTENAME: V417`,
 POINT2: MHZ:VORTAC:251:106
 POINT3: END:VORTAC:257
 NAVAIDS: true
-NAVAID1: DORTS:true
+NAVAID1: DORTS:true:1
 NAVAID2: none
 NAVAID3: none
 NAVAID4: none
@@ -246,7 +250,18 @@ ROUTENAME: V417`
     function parseNavaid(text, num) {
       if (!text || normalize(text) === 'NONE') return null;
       const p = text.split(':').map(s => s.trim());
-      return { id: `n${num}`, label: p[0] || `N${num}`, kind: 'navaid', reporting: normalize(p[1]) === 'TRUE', major: false };
+      const second = normalize(p[1] || '');
+      const hasExplicitReporting = second === 'TRUE' || second === 'FALSE';
+      const reporting = hasExplicitReporting ? second === 'TRUE' : false;
+      const sectionRaw = hasExplicitReporting ? (p[2] || '') : (p[1] || '');
+      return {
+        id: `n${num}`,
+        label: p[0] || `N${num}`,
+        kind: 'navaid',
+        reporting,
+        section: Number(sectionRaw) || 1,
+        major: false
+      };
     }
 
     function buildAirway(block, idx) {
@@ -268,9 +283,8 @@ ROUTENAME: V417`
         const count = Math.max(ordered.length - 1, 1);
         points = ordered.map((p, i) => ({ ...p, x: startX + ((endX - startX) * i / count), y: lineY }));
       } else {
-        const firstNavaidCount = Math.max(segVals.length - 2, 0);
-        const firstHalf = navaids.slice(0, firstNavaidCount);
-        const secondHalf = navaids.slice(firstNavaidCount);
+        const firstHalf = navaids.filter(n => n.section === 1);
+        const secondHalf = navaids.filter(n => n.section === 2);
         const first = [p1, ...firstHalf, p2].filter(Boolean);
         const second = [p2, ...secondHalf, p3].filter(Boolean);
         const c1 = Math.max(first.length - 1, 1);
