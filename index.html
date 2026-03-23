@@ -163,7 +163,7 @@
       position: absolute;
       top: 0;
       left: 50%;
-      transform: translateX(-50%);
+      transform: translate(-50%, -50%);
       width: 44px;
       height: 44px;
       display: flex;
@@ -173,14 +173,14 @@
 
     .major-point .radial-left {
       position: absolute;
-      top: 6px;
-      right: calc(50% + 30px);
+      top: -16px;
+      right: calc(50% + 28px);
     }
 
     .major-point .radial-right {
       position: absolute;
-      top: 6px;
-      left: calc(50% + 30px);
+      top: -16px;
+      left: calc(50% + 28px);
     }
 
     .navaid-point {
@@ -201,7 +201,7 @@
       position: absolute;
       top: 0;
       left: 50%;
-      transform: translateX(-50%);
+      transform: translate(-50%, -50%);
       width: 38px;
       height: 38px;
       display: flex;
@@ -542,13 +542,41 @@ ROUTENAME: V417`
 
     const airways = airwayTextData.map(buildAirway);
 
+    function getSegmentAnchor(point, side) {
+      if (!point.major) {
+        return { x: point.x, y: point.y };
+      }
+
+      const radialBoxWidth = 58;
+      const gapFromSymbol = 28;
+      const halfBox = radialBoxWidth / 2;
+
+      if (side === 'start') {
+        if (point.leaveRadial) {
+          return {
+            x: point.x + gapFromSymbol + radialBoxWidth,
+            y: point.y
+          };
+        }
+        return { x: point.x + 22, y: point.y };
+      }
+
+      if (point.arriveRadial) {
+        return {
+          x: point.x - gapFromSymbol - radialBoxWidth,
+          y: point.y
+        };
+      }
+      return { x: point.x - 22, y: point.y };
+    }
+
     function renderSegments(airway) {
       return airway.segments.map((seg, index) => {
         const from = pointById(airway, seg.from);
         const to = pointById(airway, seg.to);
 
-        const start = from.major ? projectFromPoint(from, from.leaveRadial, 40) : { x: from.x, y: from.y };
-        const end = to.major ? projectFromPoint(to, to.arriveRadial, 40) : { x: to.x, y: to.y };
+        const start = getSegmentAnchor(from, 'start');
+        const end = getSegmentAnchor(to, 'end');
 
         const midX = (start.x + end.x) / 2;
         const topRowY = airway.lineY - 24 - (index % 2) * 2;
@@ -557,12 +585,8 @@ ROUTENAME: V417`
         let airwayX = midX;
 
         if (seg.subMileage && seg.airway) {
-          mileageX = midX - 38;
-          airwayX = midX + 38;
-        } else if (seg.subMileage) {
-          mileageX = midX;
-        } else if (seg.airway) {
-          airwayX = midX;
+          mileageX = midX - 40;
+          airwayX = midX + 40;
         }
 
         return `
