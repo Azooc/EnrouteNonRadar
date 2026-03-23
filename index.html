@@ -174,13 +174,13 @@
     .major-point .radial-left {
       position: absolute;
       top: 6px;
-      right: calc(50% + 28px);
+      right: calc(50% + 30px);
     }
 
     .major-point .radial-right {
       position: absolute;
       top: 6px;
-      left: calc(50% + 28px);
+      left: calc(50% + 30px);
     }
 
     .navaid-point {
@@ -546,18 +546,29 @@ ROUTENAME: V417`
       return airway.segments.map((seg, index) => {
         const from = pointById(airway, seg.from);
         const to = pointById(airway, seg.to);
-        const start = from.major ? projectFromPoint(from, from.leaveRadial, 26) : { x: from.x, y: from.y };
-        const end = to.major ? projectFromPoint(to, to.arriveRadial, 26) : { x: to.x, y: to.y };
+
+        const start = from.major ? projectFromPoint(from, from.leaveRadial, 40) : { x: from.x, y: from.y };
+        const end = to.major ? projectFromPoint(to, to.arriveRadial, 40) : { x: to.x, y: to.y };
 
         const midX = (start.x + end.x) / 2;
-        const baseTopY = airway.lineY - 20 - (index % 2) * 16;
-        const mileageX = midX - (seg.airway ? 42 : 0);
-        const airwayX = midX + 26;
+        const topRowY = airway.lineY - 24 - (index % 2) * 2;
+
+        let mileageX = midX;
+        let airwayX = midX;
+
+        if (seg.subMileage && seg.airway) {
+          mileageX = midX - 38;
+          airwayX = midX + 38;
+        } else if (seg.subMileage) {
+          mileageX = midX;
+        } else if (seg.airway) {
+          airwayX = midX;
+        }
 
         return `
           <line x1="${start.x}" y1="${start.y}" x2="${end.x}" y2="${end.y}" stroke="#2d5bff" stroke-width="3" />
-          ${seg.subMileage ? `<foreignObject x="${mileageX - 27}" y="${baseTopY - 15}" width="54" height="32"><div xmlns="http://www.w3.org/1999/xhtml">${inputHTML(seg.subMileage, 'submileage-box')}</div></foreignObject>` : ''}
-          ${seg.airway ? `<foreignObject x="${airwayX - 36}" y="${baseTopY - 15}" width="72" height="32"><div xmlns="http://www.w3.org/1999/xhtml">${inputHTML(seg.airway, 'airway-box')}</div></foreignObject>` : ''}
+          ${seg.subMileage ? `<foreignObject x="${mileageX - 27}" y="${topRowY - 15}" width="54" height="32"><div xmlns="http://www.w3.org/1999/xhtml">${inputHTML(seg.subMileage, 'submileage-box')}</div></foreignObject>` : ''}
+          ${seg.airway ? `<foreignObject x="${airwayX - 36}" y="${topRowY - 15}" width="72" height="32"><div xmlns="http://www.w3.org/1999/xhtml">${inputHTML(seg.airway, 'airway-box')}</div></foreignObject>` : ''}
         `;
       }).join('');
     }
