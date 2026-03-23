@@ -1,466 +1,149 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>IFR Airway Study</title>
-  <style>
-    :root {
-      --bg: #eef2f7;
-      --card: #ffffff;
-      --text: #111827;
-      --muted: #6b7280;
-      --line: #315efb;
-      --border: #cbd5e1;
-      --ok: #dcfce7;
-      --okb: #16a34a;
-      --bad: #fee2e2;
-      --badb: #dc2626;
-    }
-    * { box-sizing: border-box; }
-    body {
-      margin: 0;
-      padding: 24px;
-      font-family: Arial, Helvetica, sans-serif;
-      background: var(--bg);
-      color: var(--text);
-    }
-    .wrap { max-width: 1400px; margin: 0 auto; }
-    h1 { margin: 0 0 8px; }
-    .lead { color: var(--muted); margin: 0 0 20px; }
-    .card {
-      background: var(--card);
-      border: 1px solid var(--border);
-      border-radius: 18px;
-      padding: 20px;
-      margin-bottom: 24px;
-      box-shadow: 0 10px 24px rgba(0,0,0,.06);
-    }
-    .title { font-size: 1.15rem; font-weight: 700; margin-bottom: 14px; }
-    .diagram { overflow-x: auto; }
-    .diagram-inner {
-      position: relative;
-      min-width: 920px;
-      height: 250px;
-      background: #f3f4f6;
-      border: 1px solid #dbe3ec;
-      border-radius: 14px;
-      overflow: hidden;
-    }
-    .route-svg {
-      position: absolute;
-      inset: 0;
-      width: 100%;
-      height: 100%;
-      z-index: 1;
-      pointer-events: none;
-    }
-    .point {
-      position: absolute;
-      transform: translate(-50%, -50%);
-      z-index: 3;
-    }
-    .major { width: 190px; height: 120px; }
-    .minor { width: 100px; height: 90px; }
-    .point-label, .radial, .seg-box, .route-box, .total-box {
-      border: 1px solid #22c55e;
-      border-radius: 8px;
-      background: #dcfce7;
-      text-align: center;
-      padding: 4px 6px;
-      font-size: 1rem;
-    }
-    .point-label.major-label {
-      position: absolute;
-      left: 50%;
-      top: -32px;
-      transform: translateX(-50%);
-      width: 72px;
-      font-weight: 700;
-      font-size: 1.05rem;
-      text-transform: uppercase;
-    }
-    .point-label.minor-label {
-      position: absolute;
-      left: 50%;
-      top: -40px;
-      transform: translateX(-50%);
-      width: 86px;
-      font-size: .92rem;
-      text-transform: uppercase;
-    }
-    .symbol-wrap {
-      position: absolute;
-      left: 50%;
-      top: 50%;
-      transform: translate(-50%, -50%);
-      width: 40px;
-      height: 40px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-    }
-    .radial {
-      position: absolute;
-      top: 50%;
-      transform: translateY(-50%);
-      width: 58px;
-    }
-    .radial-left { right: calc(50% + 30px); }
-    .radial-right { left: calc(50% + 30px); }
-    .symbol { width: 38px; height: 38px; display: block; }
-    .line-label {
-      position: absolute;
-      transform: translate(-50%, -50%);
-      z-index: 4;
-    }
-    .seg-box { width: 54px; }
-    .route-box { width: 72px; text-transform: uppercase; }
-    .total-box {
-      width: 62px;
-      border: 2px solid #222;
-      border-radius: 0;
-      background: #fff;
-      font-weight: 700;
-    }
-    .controls { display: flex; gap: 12px; flex-wrap: wrap; margin-top: 14px; }
-    button {
-      border: none;
-      border-radius: 10px;
-      padding: 10px 16px;
-      cursor: pointer;
-      font-size: .95rem;
-    }
-    .btn-primary { background: #0f172a; color: white; }
-    .btn-secondary { background: #e5e7eb; }
-    .status { min-height: 22px; margin-top: 12px; font-weight: 700; }
-    .correct { background: var(--ok) !important; border-color: var(--okb) !important; }
-    .wrong { background: var(--bad) !important; border-color: var(--badb) !important; }
-    code { background: #eef2ff; padding: 2px 6px; border-radius: 6px; }
-    .help { color: var(--muted); line-height: 1.45; }
-  </style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>IFR Airway Study</title>
+<style>
+body{margin:0;padding:20px;font-family:Arial;background:#eef2f7}
+.card{background:#fff;padding:20px;border-radius:12px;margin-bottom:20px}
+.diagram-inner{position:relative;height:240px;background:#f3f4f6;border-radius:10px}
+.point{position:absolute;transform:translate(-50%,-50%)}
+.symbol{width:30px;height:30px}
+.point-label{position:absolute;top:-28px;left:50%;transform:translateX(-50%);font-size:12px}
+.radial{position:absolute;top:50%;transform:translateY(-50%);width:50px;text-align:center}
+.radial-left{right:60px}
+.radial-right{left:60px}
+.route-svg{position:absolute;inset:0}
+.line-label{position:absolute;transform:translate(-50%,-50%)}
+.total-box{border:2px solid #000;padding:4px 6px;background:#fff}
+.route-name{font-weight:bold}
+</style>
 </head>
 <body>
-  <div class="wrap">
-    <h1>IFR Airway Study</h1>
-    <p class="lead">Routes render from a simple text block. Labels float above. Symbols, radials, and airway line stay on one straight line.</p>
-    <div id="app"></div>
-    <div class="card">
-      <div class="title">How to edit routes</div>
-      <div class="help">
-        Edit the <code>airwayTextData</code> array in the script.<br><br>
-        <code>POINT1: MLU:VORTAC:087</code><br>
-        <code>POINT2: MEI:VORTAC:272</code><br>
-        <code>POINT3: none</code><br>
-        <code>NAVAID1: STUEE:false:1</code><br>
-        <code>SEG1: 15</code><br>
-        <code>SEG2: 83</code><br>
-        <code>TOTALDISTANCE1: 98</code><br>
-        <code>ROUTENAME: V417</code><br><br>
-        Middle major point example:<br>
-        <code>POINT2: MEI:VORTAC:272:098</code><br><br>
-        Navaid section example:<br>
-        <code>NAVAID1: STUEE:true:1</code><br>
-        <code>NAVAID2: HEDUD:false:2</code><br>
-        1 = between POINT1 and POINT2, 2 = between POINT2 and POINT3
-      </div>
-    </div>
-  </div>
-
-  <script>
-    const airwayTextData = [
-`POINT1: MLU:VORTAC:087
-POINT2: MEI:VORTAC:272
+<div id="app"></div>
+<script>
+const data=[`POINT1: MLU:VORTAC:072
+POINT2: MHZ:VORTAC:281
 POINT3: none
-NAVAIDS: false
-NAVAID1: none
+NAVAIDS: true
+NAVAID1: HATER:true:1
 NAVAID2: none
 NAVAID3: none
 NAVAID4: none
-SEG1: 98
-SEG2: none
+SEG1: 49
+SEG2: 49
 SEG3: none
 SEG4: none
 SEG5: none
 TOTALDISTANCE1: 98
 TOTALDISTANCE2: none
-ROUTENAME: V417`,
+ROUTENAME: V427`,
 `POINT1: MLU:VORTAC:087
-POINT2: MEI:VORTAC:272
-POINT3: none
+POINT2: MHZ:VORTAC:266:091
+POINT3: MEI:VORTAC:272
 NAVAIDS: true
-NAVAID1: STUEE:false
+NAVAID1: STUEE:true:1
+NAVAID2: DINKY:false:1
+NAVAID3: HEDUD:false:1
+NAVAID4: none
+SEG1: 19
+SEG2: 12
+SEG3: 41
+SEG4: 23
+SEG5: none
+TOTALDISTANCE1: 95
+TOTALDISTANCE2: 70
+ROUTENAME: V417`,
+`POINT1: MLU:VORTAC:102
+POINT2: MHZ:VORTAC:251:106
+POINT3: END:VORTAC:257
+NAVAIDS: true
+NAVAID1: DORTS:true:1
 NAVAID2: none
 NAVAID3: none
 NAVAID4: none
-SEG1: 15
-SEG2: 83
+SEG1: 49
+SEG2: 49
 SEG3: none
 SEG4: none
 SEG5: none
 TOTALDISTANCE1: 98
-TOTALDISTANCE2: none
-ROUTENAME: V417`,
-`POINT1: MLU:VORTAC:087
-POINT2: MEI:VORTAC:272:098
-POINT3: END:VORTAC:268
-NAVAIDS: true
-NAVAID1: STUEE:false
-NAVAID2: DINKY:true
-NAVAID3: none
-NAVAID4: none
-SEG1: 15
-SEG2: 83
-SEG3: 8
-SEG4: 35
-SEG5: none
-TOTALDISTANCE1: 98
-TOTALDISTANCE2: 43
-ROUTENAME: V417`
-    ];
+TOTALDISTANCE2: 72
+ROUTENAME: V417`];
 
-    function normalize(v) {
-      return String(v || '').trim().toUpperCase().replace(/\s+/g, '');
-    }
+function norm(v){return String(v||"").trim().toUpperCase()}
 
-    function parseBlock(block) {
-      const out = {};
-      String(block).split(/\r?\n/).map(s => s.trim()).filter(Boolean).forEach(line => {
-        const i = line.indexOf(':');
-        if (i === -1) return;
-        out[line.slice(0, i).trim().toUpperCase()] = line.slice(i + 1).trim();
-      });
-      return out;
-    }
+function parse(block){
+let m={}
+block.split("\n").forEach(l=>{
+let i=l.indexOf(":")
+if(i>0)m[l.slice(0,i).trim()]=l.slice(i+1).trim()
+})
+return m
+}
 
-    function parsePoint(text, num) {
-      if (!text || normalize(text) === 'NONE') return null;
-      const p = text.split(':').map(s => s.trim());
-      const kind = normalize(p[1]).replace('/', '') === 'VORDME' ? 'vordme' : 'vortac';
-      return {
-        id: `p${num}`,
-        label: p[0] || `P${num}`,
-        kind,
-        arriveRadial: num === 1 ? '' : (p[2] || ''),
-        leaveRadial: num === 1 ? (p[2] || '') : (p[3] || ''),
-        major: true
-      };
-    }
+function pPoint(v,id){
+if(!v||norm(v)==="NONE")return null
+let a=v.split(":")
+return{ id,label:a[0],leave:a[2]||"",arrive:a[3]||"" }
+}
 
-    function parseNavaid(text, num) {
-      if (!text || normalize(text) === 'NONE') return null;
-      const p = text.split(':').map(s => s.trim());
-      const second = normalize(p[1] || '');
-      const hasExplicitReporting = second === 'TRUE' || second === 'FALSE';
-      const reporting = hasExplicitReporting ? second === 'TRUE' : false;
-      const sectionRaw = hasExplicitReporting ? (p[2] || '') : (p[1] || '');
-      return {
-        id: `n${num}`,
-        label: p[0] || `N${num}`,
-        kind: 'navaid',
-        reporting,
-        section: Number(sectionRaw) || 1,
-        major: false
-      };
-    }
+function pNav(v,id){
+if(!v||norm(v)==="NONE")return null
+let a=v.split(":")
+return{ id,label:a[0],sec:Number(a[2]||1) }
+}
 
-    function buildAirway(block, idx) {
-      const m = parseBlock(block);
-      const p1 = parsePoint(m.POINT1, 1);
-      const p2 = parsePoint(m.POINT2, 2);
-      const p3 = parsePoint(m.POINT3, 3);
-      const navaids = [1,2,3,4].map(i => parseNavaid(m[`NAVAID${i}`], i)).filter(Boolean);
-      const segVals = [1,2,3,4,5].map(i => m[`SEG${i}`]).filter(v => v && normalize(v) !== 'NONE');
-      const width = p3 ? 1320 : 920;
-      const height = 250;
-      const lineY = 145;
-      let points = [];
+function build(block,i){
+let m=parse(block)
+let p1=pPoint(m.POINT1,"p1")
+let p2=pPoint(m.POINT2,"p2")
+let p3=pPoint(m.POINT3,"p3")
+let n=[1,2,3,4].map(x=>pNav(m[`NAVAID${x}`],"n"+x)).filter(Boolean)
+let left=n.filter(x=>x.sec===1)
+let right=n.filter(x=>x.sec===2)
+let pts=[p1,...left,p2,...right,p3].filter(Boolean)
 
-      if (!p3) {
-        const ordered = [p1, ...navaids, p2].filter(Boolean);
-        const startX = 60;
-        const endX = 840;
-        const count = Math.max(ordered.length - 1, 1);
-        points = ordered.map((p, i) => ({ ...p, x: startX + ((endX - startX) * i / count), y: lineY }));
-      } else {
-        const firstHalf = navaids.filter(n => n.section === 1);
-        const secondHalf = navaids.filter(n => n.section === 2);
-        const first = [p1, ...firstHalf, p2].filter(Boolean);
-        const second = [p2, ...secondHalf, p3].filter(Boolean);
-        const c1 = Math.max(first.length - 1, 1);
-        const c2 = Math.max(second.length - 1, 1);
-        const left = first.map((p, i) => ({ ...p, x: 60 + ((820 - 60) * i / c1), y: lineY }));
-        const right = second.slice(1).map((p, i) => ({ ...p, x: 820 + ((1220 - 820) * (i + 1) / c2), y: lineY }));
-        points = [...left, ...right];
-      }
+let out=[]
+let start=80,end=820
+pts.forEach((p,idx)=>{
+let x=start+(end-start)*(idx/(pts.length-1))
+out.push({...p,x,y:140})
+})
 
-      const segments = [];
-      for (let i = 0; i < points.length - 1; i++) {
-        segments.push({
-          id: `s${i + 1}`,
-          from: points[i].id,
-          to: points[i + 1].id,
-          subMileage: segVals[i] || '',
-          airway: i === Math.floor((points.length - 2) / 2) ? (m.ROUTENAME || '') : ''
-        });
-      }
+return{points:out,name:m.ROUTENAME,tot1:m.TOTALDISTANCE1,tot2:m.TOTALDISTANCE2}
+}
 
-      const totals = [];
-      const fp1 = points.find(p => p.id === 'p1');
-      const fp2 = points.find(p => p.id === 'p2');
-      const fp3 = points.find(p => p.id === 'p3');
-      if (m.TOTALDISTANCE1 && normalize(m.TOTALDISTANCE1) !== 'NONE' && fp1 && fp2) totals.push({ x: (fp1.x + fp2.x) / 2, y: lineY + 55, mileage: m.TOTALDISTANCE1 });
-      if (m.TOTALDISTANCE2 && normalize(m.TOTALDISTANCE2) !== 'NONE' && fp2 && fp3) totals.push({ x: (fp2.x + fp3.x) / 2, y: lineY + 55, mileage: m.TOTALDISTANCE2 });
+function render(a){
+let html=`<div class="card"><div class="diagram-inner">`
 
-      return { id: `airway-${idx + 1}`, title: `${m.ROUTENAME || 'Airway'} example ${idx + 1}`, width, height, lineY, points, segments, totals };
-    }
+html+=`<svg class="route-svg">`
+for(let i=0;i<a.points.length-1;i++){
+let s=a.points[i]
+let e=a.points[i+1]
+html+=`<line x1="${s.x+70}" y1="140" x2="${e.x-70}" y2="140" stroke="blue"/>`
+}
+html+=`</svg>`
 
-    const airways = airwayTextData.map(buildAirway);
+html+=a.points.map(p=>`
+<div class="point" style="left:${p.x}px;top:140px">
+<div class="point-label">${p.label}</div>
+<img src="assets/icons/vortac.png" class="symbol"/>
+${p.leave?`<input class="radial radial-right" value="${p.leave}">`:""}
+${p.arrive?`<input class="radial radial-left" value="${p.arrive}">`:""}
+</div>`).join("")
 
-    function pointById(airway, id) {
-      return airway.points.find(p => p.id === id);
-    }
+html+=`<div class="line-label" style="left:450px;top:180px">
+<div class="route-name">${a.name}</div>
+<div class="total-box">${a.tot1}</div>
+</div>`
 
-    function inputHTML(value, cls) {
-      return `<input class="${cls}" data-answer="${String(value || '')}" autocomplete="off" spellcheck="false" />`;
-    }
+html+=`</div></div>`
+return html
+}
 
-    function vortacSVG() {
-      return '<img src="assets/icons/vortac.png" class="symbol" />';
-    }
-
-    function vordmeSVG() {
-      return '<img src="assets/icons/vordme.png" class="symbol" />';
-    }
-
-    function triangleSVG(reporting) {
-      return `<svg class="symbol" viewBox="0 0 100 100"><polygon points="50,15 85,80 15,80" fill="${reporting ? '#000' : '#fff'}" stroke="#000" stroke-width="6"></polygon></svg>`;
-    }
-
-    function symbolHTML(point) {
-      if (point.kind === 'vordme') return vordmeSVG();
-      if (point.kind === 'vortac') return vortacSVG();
-      return triangleSVG(!!point.reporting);
-    }
-
-    function getAnchor(point, side) {
-      if (!point.major) return { x: point.x, y: point.y };
-      if (side === 'start') {
-        if (point.leaveRadial) return { x: point.x + 72, y: point.y };
-        return { x: point.x + 24, y: point.y };
-      }
-      if (point.arriveRadial) return { x: point.x - 72, y: point.y };
-      return { x: point.x - 24, y: point.y };
-    }
-
-    function renderSegments(airway) {
-      return airway.segments.map((seg, i) => {
-        const from = pointById(airway, seg.from);
-        const to = pointById(airway, seg.to);
-        const start = getAnchor(from, 'start');
-        const end = getAnchor(to, 'end');
-        const midX = (start.x + end.x) / 2;
-        const labelY = airway.lineY - 28;
-        const segX = seg.airway ? midX - 40 : midX;
-        const routeX = seg.airway ? midX + 40 : midX;
-        return `
-          <line x1="${start.x}" y1="${airway.lineY}" x2="${end.x}" y2="${airway.lineY}" stroke="#315efb" stroke-width="3" />
-          ${seg.subMileage ? `<foreignObject x="${segX - 27}" y="${labelY - 15}" width="54" height="32"><div xmlns="http://www.w3.org/1999/xhtml">${inputHTML(seg.subMileage, 'seg-box')}</div></foreignObject>` : ''}
-          
-        `;
-      }).join('');
-    }
-
-    function renderTotals(airway) {
-      return airway.totals.map(t => `
-        <div class="line-label" style="left:${t.x}px;top:${t.y - 24}px;">
-          <div class="route-box">${airway.title.split(' ')[0]}</div>
-        </div>
-        <div class="line-label" style="left:${t.x}px;top:${t.y}px;">
-          ${inputHTML(t.mileage, 'total-box')}
-        </div>
-      `).join('');
-    }px;top:${t.y}px;">${inputHTML(t.mileage, 'total-box')}</div>`).join('');
-    }
-
-    function renderPoints(airway) {
-      return airway.points.map(p => {
-        if (p.major) {
-          return `
-            <div class="point major" style="left:${p.x}px;top:${airway.lineY}px;">
-              ${inputHTML(p.label, 'point-label major-label')}
-              <div class="symbol-wrap">${symbolHTML(p)}</div>
-              ${p.arriveRadial ? inputHTML(p.arriveRadial, 'radial radial-left') : ''}
-              ${p.leaveRadial ? inputHTML(p.leaveRadial, 'radial radial-right') : ''}
-            </div>`;
-        }
-        return `
-          <div class="point minor" style="left:${p.x}px;top:${airway.lineY}px;">
-            ${inputHTML(p.label, 'point-label minor-label')}
-            <div class="symbol-wrap">${symbolHTML(p)}</div>
-          </div>`;
-      }).join('');
-    }
-
-    function renderAirway(airway) {
-      return `
-        <div class="card" data-airway-id="${airway.id}">
-          <div class="title">${airway.title}</div>
-          <div class="diagram">
-            <div class="diagram-inner" style="width:${airway.width}px;height:${airway.height}px;">
-              <svg class="route-svg" viewBox="0 0 ${airway.width} ${airway.height}" preserveAspectRatio="none">${renderSegments(airway)}</svg>
-              ${renderTotals(airway)}
-              ${renderPoints(airway)}
-            </div>
-          </div>
-          <div class="controls">
-            <button class="btn-primary" onclick="checkAirway('${airway.id}')">Check</button>
-            <button class="btn-secondary" onclick="showAnswers('${airway.id}')">Show Correct Answers</button>
-            <button class="btn-secondary" onclick="resetAirway('${airway.id}')">Reset</button>
-          </div>
-          <div class="status" id="status-${airway.id}"></div>
-        </div>`;
-    }
-
-    function clearMarks(card) {
-      card.querySelectorAll('input[data-answer]').forEach(i => i.classList.remove('correct', 'wrong'));
-    }
-
-    function checkAirway(id) {
-      const card = document.querySelector(`[data-airway-id="${id}"]`);
-      const status = document.getElementById(`status-${id}`);
-      const inputs = [...card.querySelectorAll('input[data-answer]')];
-      let okAll = true;
-      clearMarks(card);
-      inputs.forEach(i => {
-        const ok = normalize(i.value) === normalize(i.dataset.answer);
-        i.classList.add(ok ? 'correct' : 'wrong');
-        if (!ok) okAll = false;
-      });
-      status.textContent = okAll ? 'All answers are correct.' : 'Some answers are wrong.';
-      status.style.color = okAll ? '#15803d' : '#b91c1c';
-    }
-
-    function showAnswers(id) {
-      const card = document.querySelector(`[data-airway-id="${id}"]`);
-      const status = document.getElementById(`status-${id}`);
-      const inputs = [...card.querySelectorAll('input[data-answer]')];
-      clearMarks(card);
-      inputs.forEach(i => { i.value = i.dataset.answer; i.classList.add('correct'); });
-      status.textContent = 'Correct answers filled in.';
-      status.style.color = '#1d4ed8';
-    }
-
-    function resetAirway(id) {
-      const card = document.querySelector(`[data-airway-id="${id}"]`);
-      const status = document.getElementById(`status-${id}`);
-      const inputs = [...card.querySelectorAll('input[data-answer]')];
-      clearMarks(card);
-      inputs.forEach(i => i.value = '');
-      status.textContent = '';
-    }
-
-    document.getElementById('app').innerHTML = airways.map(renderAirway).join('');
-  </script>
+document.getElementById("app").innerHTML=data.map((d,i)=>render(build(d,i))).join("")
+</script>
 </body>
 </html>
