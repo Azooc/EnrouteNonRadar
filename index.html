@@ -304,8 +304,7 @@ ROUTENAME: V417`
 
 function parseSimpleBlock(block, index) {
   const lines = block
-    .split('
-')
+    .split('\n')
     .map(line => line.trim())
     .filter(Boolean);
 
@@ -321,13 +320,18 @@ function parseSimpleBlock(block, index) {
   function parsePoint(value, pointNumber) {
     if (!value || value.toLowerCase() === 'none') return null;
     const parts = value.split(':').map(v => v.trim());
-    const [label, kindRaw, arriveRaw, leaveRaw] = parts;
+    const label = parts[0] || `POINT${pointNumber}`;
+    const kindRaw = (parts[1] || 'VORTAC').toUpperCase();
+    const kind = kindRaw === 'VOR/DME' ? 'vordme' : kindRaw.toLowerCase();
+    const radialA = parts[2] || '';
+    const radialB = parts[3] || '';
+
     return {
       id: `p${pointNumber}`,
       label,
-      kind: (kindRaw || 'VORTAC').toLowerCase(),
-      arriveRadial: pointNumber === 1 ? null : (arriveRaw || ''),
-      leaveRadial: pointNumber === 1 ? (arriveRaw || '') : (leaveRaw || arriveRaw || ''),
+      kind,
+      arriveRadial: pointNumber === 1 ? '' : radialA,
+      leaveRadial: pointNumber === 1 ? radialA : (radialB || radialA),
       major: true
     };
   }
@@ -337,9 +341,9 @@ function parseSimpleBlock(block, index) {
     const parts = value.split(':').map(v => v.trim());
     return {
       id: `n${navaidNumber}`,
-      label: parts[0],
+      label: parts[0] || `NAVAID${navaidNumber}`,
       kind: 'navaid',
-      reporting: String(parts[1]).toLowerCase() === 'true',
+      reporting: String(parts[1] || 'false').toLowerCase() === 'true',
       major: false
     };
   }
@@ -348,68 +352,69 @@ function parseSimpleBlock(block, index) {
   const point2 = parsePoint(map.POINT2, 2);
   const point3 = parsePoint(map.POINT3, 3);
 
-  const navaids = [1,2,3,4]
+  const navaids = [1, 2, 3, 4]
     .map(n => parseNavaid(map[`NAVAID${n}`], n))
     .filter(Boolean);
 
-  const allStops = [point1, ...navaids, point2, ...(point3 ? [point3] : [])].filter(Boolean);
-  const segmentValues = [1,2,3,4,5]
+  const segmentValues = [1, 2, 3, 4, 5]
     .map(n => map[`SEG${n}`])
+    .map(v => (v || '').trim())
     .filter(v => v && v.toLowerCase() !== 'none');
 
-  const majorPoints = [point1, point2, point3].filter(Boolean);
-  const width = point3 ? 1350 : 920;
-  const height = point3 ? 260 : 220;
-
-  const positions = [];
-  if (!point3) {
-    const startX = 60;
-    const endX = 840;
-    const y = 95;
-    const count = allStops.length - 1;
-    allStops.forEach((stop, i) => {
-      positions.push({ ...stop, x: startX + ((endX - startX) * i / count), y: stop.kind === 'navaid' ? 88 : y });
-    });
+  let orderedStops;
+  if (point3) {
+    const firstHalf = navaids.slice(0, Math.ceil(navaids.length / 2));
+    const secondHalf = navaids.slice(Math.ceil(navaids.length / 2));
+    orderedStops = [point1, ...firstHalf, point2, ...secondHalf, point3].filter(Boolean);
   } else {
-    const section1 = [point1, ...navaids.filter(n => n.id === 'n1'), point2].filter(Boolean);
-    const section2 = [point2, ...navaids.filter(n => n.id !== 'n1'), point3].filter(Boolean);
-
-    const used = [];
-    const yMain = 120;
-    const start1 = 40, end1 = 820;
-    section1.forEach((stop, i) => {
-      used.push({ ...stop, x: start1 + ((end1 - start1) * i / (section1.length - 1 || 1)), y: stop.kind === 'navaid' ? 112 : yMain });
-    });
-    const start2 = 820, end2 = 1220;
-    section2.slice(1).forEach((stop, i) => {
-      used.push({ ...stop, x: start2 + ((end2 - start2) * (i + 1) / (section2.length - 1 || 1)), y: stop.kind === 'navaid' ? 112 : yMain });
-    });
-    positions.push(...used);
+    orderedStops = [point1, ...navaids, point2].filter(Boolean);
   }
 
-  const points = positions;
-  const orderedIds = points.map(p => p.id);
+  const width = point3 ? 1320 : 900;
+  const height = point3 ? 250 : 210;
+  const startX = point3 ? 50 : 60;
+  const endX = point3 ? 1230 : 830;
+  const majorY = point3 ? 120 : 95;
+  const navaidY = point3 ? 112 : 88;
+
+  const points = orderedStops.map((stop, i) => {
+    const count = Math.max(orderedStops.length - 1, 1);
+    return {
+      ...stop,
+      x: startX + ((endX - startX) * i / count),
+      y: stop.kind === 'navaid' ? navaidY : majorY
+    };
+  });
+
   const segments = [];
-  for (let i = 0; i < orderedIds.length - 1 && i < segmentValues.length; i++) {
-    const fromId = orderedIds[i];
-    const toId = orderedIds[i + 1];
+  for (let i = 0; i < points.length - 1; i++) {
+    const segValue = segmentValues[i];
+    if (!segValue) continue;
     segments.push({
       id: `s${i + 1}`,
-      from: fromId,
-      to: toId,
-      subMileage: segmentValues[i],
-      airway: i === Math.floor((orderedIds.length - 1) / 2) ? (map.ROUTENAME || '') : undefined
+      from: points[i].id,
+      to: points[i + 1].id,
+      subMileage: segValue,
+      airway: i === Math.floor((points.length - 2) / 2) ? (map.ROUTENAME || '') : ''
     });
   }
 
   const majorTotals = [];
-  const total1 = map.TOTALDISTANCE1;
-  const total2 = map.TOTALDISTANCE2;
-  if (total1 && total1.toLowerCase() !== 'none') {
-    majorTotals.push({ id: 'mt1', mileage: total1, x: point3 ? 420 : 450, y: point3 ? 158 : 128 });
+  if (map.TOTALDISTANCE1 && map.TOTALDISTANCE1.toLowerCase() !== 'none') {
+    majorTotals.push({
+      id: 'mt1',
+      mileage: map.TOTALDISTANCE1,
+      x: point3 ? 420 : 450,
+      y: point3 ? 158 : 128
+    });
   }
-  if (point3 && total2 && total2.toLowerCase() !== 'none') {
-    majorTotals.push({ id: 'mt2', mileage: total2, x: 1040, y: 158 });
+  if (point3 && map.TOTALDISTANCE2 && map.TOTALDISTANCE2.toLowerCase() !== 'none') {
+    majorTotals.push({
+      id: 'mt2',
+      mileage: map.TOTALDISTANCE2,
+      x: 990,
+      y: 158
+    });
   }
 
   return {
@@ -423,7 +428,22 @@ function parseSimpleBlock(block, index) {
   };
 }
 
-const airways = airwayTextData.map(parseSimpleBlock);
+const airways = airwayTextData.map((block, index) => {
+  try {
+    return parseSimpleBlock(block, index);
+  } catch (error) {
+    console.error('Failed to parse airway block', index + 1, error);
+    return {
+      id: `airway-error-${index + 1}`,
+      title: `Parse error in airway ${index + 1}`,
+      width: 900,
+      height: 120,
+      points: [],
+      segments: [],
+      majorTotals: []
+    };
+  }
+});
 
     function normalize(value) {
       return value.trim().toUpperCase().replace(/\s+/g, '');
@@ -563,8 +583,13 @@ const airways = airwayTextData.map(parseSimpleBlock);
     }
 
     function renderApp() {
-      document.getElementById('app').innerHTML = airways.map(renderAirway).join('');
-    }
+  const app = document.getElementById('app');
+  if (!airways.length) {
+    app.innerHTML = '<div class="airway-card"><h2 class="card-title">No airways loaded</h2></div>';
+    return;
+  }
+  app.innerHTML = airways.map(renderAirway).join('');
+}
 
     function clearMarks(card) {
       card.querySelectorAll('input[data-answer]').forEach(input => {
