@@ -282,12 +282,11 @@ ROUTENAME: V417`
 
       const segments = [];
       for (let i = 0; i < points.length - 1; i++) {
-        if (!segVals[i]) continue;
         segments.push({
           id: `s${i + 1}`,
           from: points[i].id,
           to: points[i + 1].id,
-          subMileage: segVals[i],
+          subMileage: segVals[i] || '',
           airway: i === Math.floor((points.length - 2) / 2) ? (m.ROUTENAME || '') : ''
         });
       }
