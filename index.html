@@ -169,53 +169,53 @@
 
   <script>
     const airwayTextData = [
-`POINT1: MLU:VORTAC:072
-POINT2: MHZ:VORTAC:281
+`POINT1: MLU:VORTAC:087
+POINT2: MEI:VORTAC:272
 POINT3: none
-NAVAIDS: true
-NAVAID1: HATER:true:1
+NAVAIDS: false
+NAVAID1: none
 NAVAID2: none
 NAVAID3: none
 NAVAID4: none
-SEG1: 49
-SEG2: 49
+SEG1: 98
+SEG2: none
 SEG3: none
 SEG4: none
 SEG5: none
 TOTALDISTANCE1: 98
 TOTALDISTANCE2: none
-ROUTENAME: V427`,
-`POINT1: MLU:VORTAC:087
-POINT2: MHZ:VORTAC:266:091
-POINT3: MEI:VORTAC:272
-NAVAIDS: true
-NAVAID1: STUEE:true:1
-NAVAID2: DINKY:false:1
-NAVAID3: HEDUD:false:1
-NAVAID4: none
-SEG1: 19
-SEG2: 12
-SEG3: 41
-SEG4: 23
-SEG5: none
-TOTALDISTANCE1: 95
-TOTALDISTANCE2: 70
 ROUTENAME: V417`,
-`POINT1: MLU:VORTAC:102
-POINT2: MHZ:VORTAC:251:106
-POINT3: END:VORTAC:257
+`POINT1: MLU:VORTAC:087
+POINT2: MEI:VORTAC:272
+POINT3: none
 NAVAIDS: true
-NAVAID1: DORTS:true:1
+NAVAID1: STUEE:false
 NAVAID2: none
 NAVAID3: none
 NAVAID4: none
-SEG1: 49
-SEG2: 49
+SEG1: 15
+SEG2: 83
 SEG3: none
 SEG4: none
 SEG5: none
 TOTALDISTANCE1: 98
-TOTALDISTANCE2: 72
+TOTALDISTANCE2: none
+ROUTENAME: V417`,
+`POINT1: MLU:VORTAC:087
+POINT2: MEI:VORTAC:272:098
+POINT3: END:VORTAC:268
+NAVAIDS: true
+NAVAID1: STUEE:false
+NAVAID2: DINKY:true
+NAVAID3: none
+NAVAID4: none
+SEG1: 15
+SEG2: 83
+SEG3: 8
+SEG4: 35
+SEG5: none
+TOTALDISTANCE1: 98
+TOTALDISTANCE2: 43
 ROUTENAME: V417`
     ];
 
@@ -366,13 +366,21 @@ ROUTENAME: V417`
         return `
           <line x1="${start.x}" y1="${airway.lineY}" x2="${end.x}" y2="${airway.lineY}" stroke="#315efb" stroke-width="3" />
           ${seg.subMileage ? `<foreignObject x="${segX - 27}" y="${labelY - 15}" width="54" height="32"><div xmlns="http://www.w3.org/1999/xhtml">${inputHTML(seg.subMileage, 'seg-box')}</div></foreignObject>` : ''}
-          ${seg.airway ? `<foreignObject x="${routeX - 36}" y="${labelY - 15}" width="72" height="32"><div xmlns="http://www.w3.org/1999/xhtml">${inputHTML(seg.airway, 'route-box')}</div></foreignObject>` : ''}
+          
         `;
       }).join('');
     }
 
     function renderTotals(airway) {
-      return airway.totals.map(t => `<div class="line-label" style="left:${t.x}px;top:${t.y}px;">${inputHTML(t.mileage, 'total-box')}</div>`).join('');
+      return airway.totals.map(t => `
+        <div class="line-label" style="left:${t.x}px;top:${t.y - 24}px;">
+          <div class="route-box">${airway.title.split(' ')[0]}</div>
+        </div>
+        <div class="line-label" style="left:${t.x}px;top:${t.y}px;">
+          ${inputHTML(t.mileage, 'total-box')}
+        </div>
+      `).join('');
+    }px;top:${t.y}px;">${inputHTML(t.mileage, 'total-box')}</div>`).join('');
     }
 
     function renderPoints(airway) {
