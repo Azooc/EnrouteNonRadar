@@ -1,0 +1,620 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>IFR Airway Study</title>
+  <style>
+    :root {
+      --bg: #eef2f7;
+      --card: #ffffff;
+      --text: #1f2937;
+      --muted: #6b7280;
+      --line: #2d5bff;
+      --border: #cbd5e1;
+      --correct: #dcfce7;
+      --correct-border: #16a34a;
+      --wrong: #fee2e2;
+      --wrong-border: #dc2626;
+      --button: #111827;
+      --button-text: #ffffff;
+      --button-secondary: #e5e7eb;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      font-family: Arial, Helvetica, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      padding: 24px;
+    }
+
+    .wrap {
+      max-width: 1400px;
+      margin: 0 auto;
+    }
+
+    h1 {
+      margin: 0 0 8px;
+      font-size: 2rem;
+    }
+
+    .lead {
+      margin: 0 0 20px;
+      color: var(--muted);
+      max-width: 900px;
+      line-height: 1.45;
+    }
+
+    .airway-card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 18px;
+      padding: 22px;
+      box-shadow: 0 10px 24px rgba(0,0,0,0.06);
+      margin-bottom: 24px;
+    }
+
+    .card-title {
+      margin: 0 0 14px;
+      font-size: 1.15rem;
+    }
+
+    .diagram {
+      overflow-x: auto;
+      padding: 10px 0 12px;
+    }
+
+    .diagram-inner {
+      position: relative;
+      min-width: 1180px;
+      height: 270px;
+      background: #f3f4f6;
+      border-radius: 14px;
+      border: 1px solid #dde3ea;
+    }
+
+    .route-svg {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      overflow: visible;
+      pointer-events: none;
+    }
+
+    .line-label {
+      position: absolute;
+      transform: translate(-50%, -50%);
+      z-index: 2;
+    }
+
+    .mileage-box {
+      width: 62px;
+      text-align: center;
+      border: 2px solid #222;
+      background: #fff;
+      font-weight: 700;
+      font-size: 1.08rem;
+      padding: 4px 6px;
+    }
+
+    .submileage-box {
+      width: 54px;
+      text-align: center;
+      border: 1px solid var(--border);
+      background: #fff;
+      font-size: 1rem;
+      padding: 4px 6px;
+    }
+
+    .airway-box {
+      width: 72px;
+      text-align: center;
+      border: 1px solid var(--border);
+      background: #fff;
+      font-size: 1rem;
+      padding: 4px 6px;
+      text-transform: uppercase;
+    }
+
+    .point {
+      position: absolute;
+      width: 120px;
+      transform: translate(-50%, -50%);
+      text-align: center;
+      z-index: 3;
+    }
+
+    .point-label {
+      width: 78px;
+      text-align: center;
+      font-size: 1.05rem;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 4px 6px;
+      background: white;
+      text-transform: uppercase;
+      margin-bottom: 4px;
+    }
+
+    .point-label.major {
+      width: 66px;
+      font-size: 1.5rem;
+      font-weight: 700;
+    }
+
+    .point-symbol {
+      width: 38px;
+      height: 38px;
+      display: block;
+      margin: 0 auto 4px;
+    }
+
+    .radial-input {
+      width: 58px;
+      text-align: center;
+      font-size: 0.98rem;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 4px 6px;
+      background: white;
+    }
+
+    .controls {
+      display: flex;
+      gap: 12px;
+      flex-wrap: wrap;
+      margin-top: 14px;
+    }
+
+    button {
+      border: none;
+      border-radius: 10px;
+      padding: 10px 16px;
+      font-size: 0.95rem;
+      cursor: pointer;
+    }
+
+    .btn-primary {
+      background: var(--button);
+      color: var(--button-text);
+    }
+
+    .btn-secondary {
+      background: var(--button-secondary);
+      color: var(--text);
+    }
+
+    .status {
+      margin-top: 14px;
+      font-weight: 700;
+      min-height: 22px;
+    }
+
+    .correct {
+      background: var(--correct) !important;
+      border-color: var(--correct-border) !important;
+    }
+
+    .wrong {
+      background: var(--wrong) !important;
+      border-color: var(--wrong-border) !important;
+    }
+
+    .help {
+      color: var(--muted);
+      margin-top: 18px;
+      line-height: 1.45;
+    }
+
+    code {
+      background: #eef2ff;
+      padding: 2px 6px;
+      border-radius: 6px;
+    }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <h1>IFR Airway Study</h1>
+    <p class="lead">
+      This version is data-driven so you can change routes easily. Each airway is built from points and segments.
+      It supports major fixes, intermediate navaids, sub-mileages, total mileages, airway labels, answer checking,
+      answer reveal, and route drawing based on radial degrees.
+    </p>
+
+    <div id="app"></div>
+
+    <div class="airway-card">
+      <h2 class="card-title">How to edit routes</h2>
+      <div class="help">
+        Edit the <code>airwayTextData</code> list in the JavaScript using your simple format.
+        <br><br>
+        Example:<br><br>
+        <code>POINT1: MLU:VORTAC:087</code><br>
+        <code>POINT2: MEI:VORTAC:272</code><br>
+        <code>POINT3: none</code><br>
+        <code>NAVAIDS: true</code><br>
+        <code>NAVAID1: STUEE:false</code><br>
+        <code>SEG1: 15</code><br>
+        <code>TOTALDISTANCE1: 98</code><br>
+        <code>ROUTENAME: V417</code><br><br>
+        For a middle major point, use two radials on POINT2 like:<br>
+        <code>POINT2: MEI:VORTAC:272:098</code>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const airwayTextData = [
+`POINT1: MLU:VORTAC:087
+POINT2: MEI:VORTAC:272
+POINT3: none
+NAVAIDS: false
+NAVAID1: none
+NAVAID2: none
+NAVAID3: none
+NAVAID4: none
+SEG1: 98
+SEG2: none
+SEG3: none
+SEG4: none
+SEG5: none
+TOTALDISTANCE1: 98
+TOTALDISTANCE2: none
+ROUTENAME: V417`,
+
+`POINT1: MLU:VORTAC:087
+POINT2: MEI:VORTAC:272
+POINT3: none
+NAVAIDS: true
+NAVAID1: STUEE:false
+NAVAID2: none
+NAVAID3: none
+NAVAID4: none
+SEG1: 15
+SEG2: 83
+SEG3: none
+SEG4: none
+SEG5: none
+TOTALDISTANCE1: 98
+TOTALDISTANCE2: none
+ROUTENAME: V417`,
+
+`POINT1: MLU:VORTAC:087
+POINT2: MEI:VORTAC:272:098
+POINT3: END2:VORTAC:268
+NAVAIDS: true
+NAVAID1: STUEE:false
+NAVAID2: DINKY:true
+NAVAID3: none
+NAVAID4: none
+SEG1: 15
+SEG2: 83
+SEG3: 8
+SEG4: 35
+SEG5: none
+TOTALDISTANCE1: 98
+TOTALDISTANCE2: 43
+ROUTENAME: V417`
+];
+
+function parseSimpleBlock(block, index) {
+  const lines = block
+    .split('
+')
+    .map(line => line.trim())
+    .filter(Boolean);
+
+  const map = {};
+  for (const line of lines) {
+    const colonIndex = line.indexOf(':');
+    if (colonIndex === -1) continue;
+    const key = line.slice(0, colonIndex).trim().toUpperCase();
+    const value = line.slice(colonIndex + 1).trim();
+    map[key] = value;
+  }
+
+  function parsePoint(value, pointNumber) {
+    if (!value || value.toLowerCase() === 'none') return null;
+    const parts = value.split(':').map(v => v.trim());
+    const [label, kindRaw, arriveRaw, leaveRaw] = parts;
+    return {
+      id: `p${pointNumber}`,
+      label,
+      kind: (kindRaw || 'VORTAC').toLowerCase(),
+      arriveRadial: pointNumber === 1 ? null : (arriveRaw || ''),
+      leaveRadial: pointNumber === 1 ? (arriveRaw || '') : (leaveRaw || arriveRaw || ''),
+      major: true
+    };
+  }
+
+  function parseNavaid(value, navaidNumber) {
+    if (!value || value.toLowerCase() === 'none') return null;
+    const parts = value.split(':').map(v => v.trim());
+    return {
+      id: `n${navaidNumber}`,
+      label: parts[0],
+      kind: 'navaid',
+      reporting: String(parts[1]).toLowerCase() === 'true',
+      major: false
+    };
+  }
+
+  const point1 = parsePoint(map.POINT1, 1);
+  const point2 = parsePoint(map.POINT2, 2);
+  const point3 = parsePoint(map.POINT3, 3);
+
+  const navaids = [1,2,3,4]
+    .map(n => parseNavaid(map[`NAVAID${n}`], n))
+    .filter(Boolean);
+
+  const allStops = [point1, ...navaids, point2, ...(point3 ? [point3] : [])].filter(Boolean);
+  const segmentValues = [1,2,3,4,5]
+    .map(n => map[`SEG${n}`])
+    .filter(v => v && v.toLowerCase() !== 'none');
+
+  const majorPoints = [point1, point2, point3].filter(Boolean);
+  const width = point3 ? 1350 : 920;
+  const height = point3 ? 260 : 220;
+
+  const positions = [];
+  if (!point3) {
+    const startX = 60;
+    const endX = 840;
+    const y = 95;
+    const count = allStops.length - 1;
+    allStops.forEach((stop, i) => {
+      positions.push({ ...stop, x: startX + ((endX - startX) * i / count), y: stop.kind === 'navaid' ? 88 : y });
+    });
+  } else {
+    const section1 = [point1, ...navaids.filter(n => n.id === 'n1'), point2].filter(Boolean);
+    const section2 = [point2, ...navaids.filter(n => n.id !== 'n1'), point3].filter(Boolean);
+
+    const used = [];
+    const yMain = 120;
+    const start1 = 40, end1 = 820;
+    section1.forEach((stop, i) => {
+      used.push({ ...stop, x: start1 + ((end1 - start1) * i / (section1.length - 1 || 1)), y: stop.kind === 'navaid' ? 112 : yMain });
+    });
+    const start2 = 820, end2 = 1220;
+    section2.slice(1).forEach((stop, i) => {
+      used.push({ ...stop, x: start2 + ((end2 - start2) * (i + 1) / (section2.length - 1 || 1)), y: stop.kind === 'navaid' ? 112 : yMain });
+    });
+    positions.push(...used);
+  }
+
+  const points = positions;
+  const orderedIds = points.map(p => p.id);
+  const segments = [];
+  for (let i = 0; i < orderedIds.length - 1 && i < segmentValues.length; i++) {
+    const fromId = orderedIds[i];
+    const toId = orderedIds[i + 1];
+    segments.push({
+      id: `s${i + 1}`,
+      from: fromId,
+      to: toId,
+      subMileage: segmentValues[i],
+      airway: i === Math.floor((orderedIds.length - 1) / 2) ? (map.ROUTENAME || '') : undefined
+    });
+  }
+
+  const majorTotals = [];
+  const total1 = map.TOTALDISTANCE1;
+  const total2 = map.TOTALDISTANCE2;
+  if (total1 && total1.toLowerCase() !== 'none') {
+    majorTotals.push({ id: 'mt1', mileage: total1, x: point3 ? 420 : 450, y: point3 ? 158 : 128 });
+  }
+  if (point3 && total2 && total2.toLowerCase() !== 'none') {
+    majorTotals.push({ id: 'mt2', mileage: total2, x: 1040, y: 158 });
+  }
+
+  return {
+    id: `airway-${index + 1}`,
+    title: map.ROUTENAME ? `${map.ROUTENAME} example ${index + 1}` : `Airway ${index + 1}`,
+    width,
+    height,
+    points,
+    segments,
+    majorTotals
+  };
+}
+
+const airways = airwayTextData.map(parseSimpleBlock);
+
+    function normalize(value) {
+      return value.trim().toUpperCase().replace(/\s+/g, '');
+    }
+
+    function pointById(airway, id) {
+      return airway.points.find(p => p.id === id);
+    }
+
+    function inputHTML(value, cls) {
+      return `<input class="${cls}" data-answer="${value}" autocomplete="off" spellcheck="false" />`;
+    }
+
+    function vortacSVG() {
+      return `
+        <svg class="point-symbol" viewBox="0 0 100 100" aria-hidden="true">
+          <polygon points="50,8 62,25 82,25 68,40 74,60 50,48 26,60 32,40 18,25 38,25" fill="#000"></polygon>
+          <circle cx="50" cy="50" r="22" fill="#fff" stroke="#000" stroke-width="10"></circle>
+          <rect x="36" y="68" width="28" height="20" fill="#000"></rect>
+        </svg>
+      `;
+    }
+
+    function triangleSVG(reporting) {
+      const fill = reporting ? '#000' : '#fff';
+      return `
+        <svg class="point-symbol" viewBox="0 0 100 100" aria-hidden="true">
+          <polygon points="50,15 85,80 15,80" fill="${fill}" stroke="#000" stroke-width="6"></polygon>
+        </svg>
+      `;
+    }
+
+    function vordmeSVG() {
+      return `
+        <svg class="point-symbol" viewBox="0 0 100 100" aria-hidden="true">
+          <rect x="10" y="10" width="80" height="80" fill="#fff" stroke="#000" stroke-width="6"></rect>
+          <polygon points="50,25 75,75 25,75" fill="#000"></polygon>
+        </svg>
+      `;
+    }
+
+    function symbolHTML(point) {
+      if (point.kind === 'vortac') return vortacSVG();
+      if (point.kind === 'vordme') return vordmeSVG();
+      return triangleSVG(!!point.reporting);
+    }
+
+    function angleFromRadial(radialText) {
+      const radial = Number(radialText);
+      if (Number.isNaN(radial)) return 0;
+      return (radial - 90) * (Math.PI / 180);
+    }
+
+    function projectedAnchor(point, useRadialOffset) {
+      if (!useRadialOffset || !point.radial || !(point.kind === 'vortac' || point.kind === 'vordme')) {
+        return { x: point.x, y: point.y };
+      }
+      const angle = angleFromRadial(point.radial);
+      const distance = 42;
+      return {
+        x: point.x + Math.cos(angle) * distance,
+        y: point.y + Math.sin(angle) * distance
+      };
+    }
+
+    function renderSegments(airway) {
+      return airway.segments.map(seg => {
+        const from = pointById(airway, seg.from);
+        const to = pointById(airway, seg.to);
+        const start = projectedAnchor(from, seg.startOffsetFromRadial !== false && (from.kind === 'vortac' || from.kind === 'vordme'));
+        const end = projectedAnchor(to, !!seg.endOffsetFromRadial);
+        const midX = (start.x + end.x) / 2;
+        const midY = (start.y + end.y) / 2;
+        const dx = end.x - start.x;
+        const dy = end.y - start.y;
+        const length = Math.sqrt(dx * dx + dy * dy) || 1;
+        const nx = -dy / length;
+        const ny = dx / length;
+
+        const subMileageX = midX + nx * -14;
+        const subMileageY = midY + ny * -14;
+        const airwayX = midX + nx * -14 + 70;
+        const airwayY = midY + ny * -14;
+
+        return `
+          <line x1="${start.x}" y1="${start.y}" x2="${end.x}" y2="${end.y}" stroke="#2d5bff" stroke-width="3" />
+          ${seg.subMileage ? `<foreignObject x="${subMileageX - 28}" y="${subMileageY - 16}" width="56" height="34"><div xmlns="http://www.w3.org/1999/xhtml">${inputHTML(seg.subMileage, 'submileage-box')}</div></foreignObject>` : ''}
+          ${seg.airway ? `<foreignObject x="${airwayX - 36}" y="${airwayY - 16}" width="72" height="34"><div xmlns="http://www.w3.org/1999/xhtml">${inputHTML(seg.airway, 'airway-box')}</div></foreignObject>` : ''}
+        `;
+      }).join('');
+    }
+
+    function renderMajorTotals(airway) {
+      return airway.majorTotals.map(total => `
+        <div class="line-label" style="left:${total.x}px; top:${total.y}px;">
+          ${inputHTML(total.mileage, 'mileage-box')}
+        </div>
+      `).join('');
+    }
+
+    function renderPoints(airway) {
+      return airway.points.map(point => {
+        const radial = point.major ? inputHTML(point.radial || '', 'radial-input') : '';
+        return `
+          <div class="point" style="left:${point.x}px; top:${point.y}px;">
+            ${inputHTML(point.label, `point-label ${point.major ? 'major' : ''}`)}
+            ${symbolHTML(point)}
+            ${radial}
+          </div>
+        `;
+      }).join('');
+    }
+
+    function renderAirway(airway) {
+      return `
+        <div class="airway-card" data-airway-id="${airway.id}">
+          <h2 class="card-title">${airway.title}</h2>
+          <div class="diagram">
+            <div class="diagram-inner" style="width:${airway.width}px;height:${airway.height}px;">
+              <svg class="route-svg" viewBox="0 0 ${airway.width} ${airway.height}" preserveAspectRatio="none">
+                ${renderSegments(airway)}
+              </svg>
+              ${renderMajorTotals(airway)}
+              ${renderPoints(airway)}
+            </div>
+          </div>
+
+          <div class="controls">
+            <button class="btn-primary" onclick="checkAirway('${airway.id}')">Check</button>
+            <button class="btn-secondary" onclick="showAnswers('${airway.id}')">Show Correct Answers</button>
+            <button class="btn-secondary" onclick="resetAirway('${airway.id}')">Reset</button>
+          </div>
+
+          <div class="status" id="status-${airway.id}"></div>
+        </div>
+      `;
+    }
+
+    function renderApp() {
+      document.getElementById('app').innerHTML = airways.map(renderAirway).join('');
+    }
+
+    function clearMarks(card) {
+      card.querySelectorAll('input[data-answer]').forEach(input => {
+        input.classList.remove('correct', 'wrong');
+      });
+    }
+
+    function checkAirway(id) {
+      const card = document.querySelector(`[data-airway-id="${id}"]`);
+      const status = document.getElementById(`status-${id}`);
+      const inputs = [...card.querySelectorAll('input[data-answer]')];
+      let allCorrect = true;
+
+      clearMarks(card);
+      inputs.forEach(input => {
+        const ok = normalize(input.value) === normalize(input.dataset.answer);
+        input.classList.add(ok ? 'correct' : 'wrong');
+        if (!ok) allCorrect = false;
+      });
+
+      status.textContent = allCorrect ? 'All answers are correct.' : 'Some answers are wrong. Red boxes need work.';
+      status.style.color = allCorrect ? '#15803d' : '#b91c1c';
+    }
+
+    function showAnswers(id) {
+      const card = document.querySelector(`[data-airway-id="${id}"]`);
+      const status = document.getElementById(`status-${id}`);
+      const inputs = [...card.querySelectorAll('input[data-answer]')];
+
+      clearMarks(card);
+      inputs.forEach(input => {
+        input.value = input.dataset.answer;
+        input.classList.add('correct');
+      });
+
+      status.textContent = 'Correct answers filled in.';
+      status.style.color = '#1d4ed8';
+    }
+
+    function resetAirway(id) {
+      const card = document.querySelector(`[data-airway-id="${id}"]`);
+      const status = document.getElementById(`status-${id}`);
+      const inputs = [...card.querySelectorAll('input[data-answer]')];
+
+      clearMarks(card);
+      inputs.forEach(input => input.value = '');
+      status.textContent = '';
+    }
+
+    renderApp();
+  </script>
+</body>
+</html>
