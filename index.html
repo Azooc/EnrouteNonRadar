@@ -154,7 +154,7 @@
 
     .major-point .point-label {
       position: absolute;
-      top: -48px;
+      top: -52px;
       left: 50%;
       transform: translateX(-50%);
     }
@@ -173,14 +173,16 @@
 
     .major-point .radial-left {
       position: absolute;
-      top: -16px;
-      right: calc(50% + 28px);
+      top: 50%;
+      transform: translateY(-50%);
+      right: calc(50% + 42px);
     }
 
     .major-point .radial-right {
       position: absolute;
-      top: -16px;
-      left: calc(50% + 28px);
+      top: 50%;
+      transform: translateY(-50%);
+      left: calc(50% + 42px);
     }
 
     .navaid-point {
@@ -545,6 +547,22 @@ ROUTENAME: V417`
     function getSegmentAnchor(point, side) {
       if (!point.major) {
         return { x: point.x, y: point.y };
+      }
+
+      const offset = 42;
+
+      if (side === 'start') {
+        if (point.leaveRadial) {
+          return { x: point.x + offset + 30, y: point.y };
+        }
+        return { x: point.x + 24, y: point.y };
+      }
+
+      if (point.arriveRadial) {
+        return { x: point.x - offset - 30, y: point.y };
+      }
+      return { x: point.x - 24, y: point.y };
+    };
       }
 
       const radialBoxWidth = 58;
